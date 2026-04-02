@@ -20,8 +20,8 @@ const COLORS = {
 };
 
 export default function LandingPage() {
-  const [trending, setTrending] = useState([]);
-  const [mostLiked, setMostLiked] = useState([]);
+  const [trending, setTrending] = useState<any[]>([]);
+const [mostLiked, setMostLiked] = useState<any[]>([]);
   const [showAllTrending, setShowAllTrending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
