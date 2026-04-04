@@ -77,9 +77,11 @@ export default function TheDex() {
       <nav className="h-24 flex items-center justify-between px-14 sticky top-0 bg-[#0F0E0E]/80 backdrop-blur-xl z-[60]">
         <Link href="/" className="flex items-center gap-2">
            <div style={{ backgroundColor: COLORS.acc1 }} className="w-4 h-8 rounded-sm" />
-           <h1 style={{ color: COLORS.acc1 }} className="text-3xl font-black tracking-tighter uppercase italic">Cinedex</h1>
+           {/* LOGO: Bold and Non-Italic */}
+           <h1 style={{ color: COLORS.acc1 }} className="text-3xl font-black tracking-tighter uppercase">Cinedex</h1>
         </Link>
-        <button onClick={() => setIsSearchOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-[#CD8E6D] transition">Terminal Search (/)</button>
+        {/* UPDATED: LABEL TO "Search Dex" */}
+        <button onClick={() => setIsSearchOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-[#CD8E6D] transition">Search Dex (/)</button>
       </nav>
 
       <main className="max-w-[1500px] mx-auto px-10 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-12 mt-12">
@@ -97,17 +99,17 @@ export default function TheDex() {
           </div>
 
           <div className="grid grid-cols-1 gap-2">
-             {[
-               { label: 'Actor', val: 'Cillian Murphy' },
-               { label: 'Director', val: 'Christopher Nolan' },
-               { label: 'Studio', val: 'A24 / Mappa' },
-               { label: 'Genre', val: 'Sci-Fi Noir' }
-             ].map((pref, i) => (
-               <div key={i} className="bg-[#1C1616] p-4 rounded-2xl border border-white/5 flex flex-col gap-1 hover:border-[#CD8E6D]/30 transition group">
-                  <span style={{ color: COLORS.acc3 }} className="text-[8px] font-black uppercase tracking-[0.4em]">{pref.label}</span>
-                  <span className="text-[11px] font-bold text-white/80 group-hover:text-white">{pref.val}</span>
-               </div>
-             ))}
+              {[
+                { label: 'Actor', val: 'Cillian Murphy' },
+                { label: 'Director', val: 'Christopher Nolan' },
+                { label: 'Studio', val: 'A24 / Mappa' },
+                { label: 'Genre', val: 'Sci-Fi Noir' }
+              ].map((pref, i) => (
+                <div key={i} className="bg-[#1C1616] p-4 rounded-2xl border border-white/5 flex flex-col gap-1 hover:border-[#CD8E6D]/30 transition group">
+                   <span style={{ color: COLORS.acc3 }} className="text-[8px] font-black uppercase tracking-[0.4em]">{pref.label}</span>
+                   <span className="text-[11px] font-bold text-white/80 group-hover:text-white">{pref.val}</span>
+                </div>
+              ))}
           </div>
         </div>
 
@@ -181,7 +183,7 @@ export default function TheDex() {
                     <Link href={`/movie/${m.id}`} key={i} className="bg-[#1C1616]/60 p-4 rounded-2xl border border-white/5 flex items-center justify-between group hover:border-[#3C7F8C]/30 transition">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-14 rounded-lg overflow-hidden shrink-0 border border-white/5">
-                                <img src={`${IMAGE_BASE}${m.poster_path}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition" />
+                                <img src={`${IMAGE_BASE}${m.poster_path}`} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition" alt={m.title} />
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-[9px] font-black text-[#8C7461] tracking-widest uppercase">{RECENT_LOG_DATA[i].time}</span>

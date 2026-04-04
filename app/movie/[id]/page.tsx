@@ -96,7 +96,8 @@ export default function MovieDetail() {
             onClick={() => router.back()}
             className="group flex items-center gap-3 bg-black/40 backdrop-blur-xl border border-white/10 px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#CD8E6D] hover:text-black transition-all"
           >
-            <span className="group-hover:-translate-x-1 transition-transform">←</span> Return to Deck
+            {/* UPDATED: LABEL TO "Return to Dex" */}
+            <span className="group-hover:-translate-x-1 transition-transform">←</span> Return to Dex
           </button>
           
           <div className="flex items-center gap-8">
@@ -104,9 +105,11 @@ export default function MovieDetail() {
               onClick={() => setIsSearchOpen(true)}
               className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-[#CD8E6D] transition"
             >
-              Search Archive (/)
+              {/* UPDATED: LABEL TO "Search Dex" */}
+              Search Dex (/)
             </button>
-            <div style={{ color: COLORS.acc1 }} className="text-2xl font-black tracking-tighter uppercase italic opacity-40">Cinedex</div>
+            {/* UPDATED: BRANDING TO LESS BOLD AND ITALIC */}
+            <div style={{ color: COLORS.acc1 }} className="text-2xl font-medium tracking-tighter uppercase italic opacity-40">Cinedex</div>
           </div>
         </div>
 
@@ -169,8 +172,9 @@ export default function MovieDetail() {
           </div>
 
           <div className="space-y-10 pb-20">
+            {/* UPDATED: LABEL TO "Top Cast" */}
             <h2 style={{ color: COLORS.acc1 }} className="text-[10px] font-black uppercase tracking-[0.5em] flex items-center gap-4">
-                <span className="w-8 h-px bg-[#CD8E6D]/30" /> Top Billing Cast
+                <span className="w-8 h-px bg-[#CD8E6D]/30" /> Top Cast
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-y-10 gap-x-6">
               {cast.map((person: any) => (

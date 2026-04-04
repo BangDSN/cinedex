@@ -39,6 +39,7 @@ export default function SearchOverlay({ isOpen, onClose }: { isOpen: boolean, on
           <input
             autoFocus
             type="text"
+            // Consistent Placeholder Label
             placeholder="ACCESS CINEDEX ARCHIVE..."
             className="w-full bg-transparent text-2xl font-black uppercase tracking-tighter text-white outline-none placeholder:text-white/5"
             value={query}
@@ -62,6 +63,7 @@ export default function SearchOverlay({ isOpen, onClose }: { isOpen: boolean, on
                     <img 
                       src={movie.poster_path ? `${IMAGE_BASE}${movie.poster_path}` : 'https://via.placeholder.com/200x300'} 
                       className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-500" 
+                      alt={movie.title}
                     />
                   </div>
                   <div className="flex flex-col gap-1">

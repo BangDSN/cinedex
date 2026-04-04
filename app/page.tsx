@@ -66,14 +66,16 @@ export default function LandingPage() {
            className="h-20 md:h-24 backdrop-blur-xl border-b flex items-center justify-between px-4 md:px-14 sticky top-0 z-50">
         <div className="flex items-center gap-2">
            <div style={{ backgroundColor: COLORS.acc1 }} className="w-3 h-6 md:w-4 md:h-8 rounded" />
+           {/* LOGO: Bold and Non-Italic */}
            <h1 style={{ color: COLORS.acc1 }} className="text-xl md:text-3xl font-black tracking-tighter uppercase cursor-pointer hover:opacity-80 transition">Cinedex</h1>
         </div>
         
         <div className="flex items-center gap-4 md:gap-12">
+          {/* SEARCH BAR: Labeled "Search Dex" */}
           <div onClick={() => setIsSearchOpen(true)} 
                className="group flex items-center gap-2 md:gap-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 px-3 md:px-6 py-2 rounded-full cursor-pointer transition-all w-auto md:w-64">
             <span style={{ color: COLORS.acc1 }} className="text-sm font-black italic opacity-60">#</span>
-            <span className="hidden md:block text-[10px] font-black uppercase tracking-widest text-white/30 group-hover:text-white/50 transition-colors">Search Archive</span>
+            <span className="hidden md:block text-[10px] font-black uppercase tracking-widest text-white/30 group-hover:text-white/50 transition-colors">Search Dex</span>
             <span className="ml-auto hidden md:block text-[10px] font-black text-white/10 group-hover:text-white/20">/</span>
           </div>
 
@@ -104,7 +106,6 @@ export default function LandingPage() {
                      className="relative z-10 aspect-[2/3] overflow-hidden rounded-[1.5rem] md:rounded-[2.5rem] transition-all duration-700 group-hover:-translate-y-4 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.9)] border group-hover:border-[#9B5B3E]/50">
                   <img src={`${IMAGE_BASE}${movie.poster_path}`} alt={movie.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                   
-                  {/* SYMMETRICAL BADGES CONTAINER */}
                   <div className="absolute bottom-3 left-3 right-3 md:bottom-5 md:left-5 md:right-5 z-20 flex justify-between items-center">
                     {!showAllTrending && (
                       <div className="bg-black/60 backdrop-blur-xl border border-white/10 w-10 h-7 md:w-14 md:h-10 rounded-lg flex items-center justify-center shadow-2xl">
