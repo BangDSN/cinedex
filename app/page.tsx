@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
 import SearchOverlay from './components/SearchOverlay';
 
 const TMDB_API_KEY = 'dc99eb22bc79c3e511d871e1864c4408';
@@ -19,12 +20,35 @@ const COLORS = {
   textMuted: '#8C7461',  
 };
 
+// Initialize Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 export default function LandingPage() {
   const [trending, setTrending] = useState<any[]>([]);
   const [mostLiked, setMostLiked] = useState<any[]>([]);
   const [showAllTrending, setShowAllTrending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Check for active session
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+    };
+    getSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -53,6 +77,10 @@ export default function LandingPage() {
     fetchMovieData();
   }, []);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
   if (loading) return (
     <div style={{ backgroundColor: COLORS.bg }} className="min-h-screen flex items-center justify-center">
       <div style={{ borderTopColor: COLORS.acc1 }} className="animate-spin rounded-full h-12 w-12 border-4 border-b-transparent"></div>
@@ -69,7 +97,7 @@ export default function LandingPage() {
            <h1 style={{ color: COLORS.acc1 }} className="text-xl md:text-3xl font-black tracking-tighter uppercase cursor-pointer hover:opacity-80 transition">Cinedex</h1>
         </div>
         
-        <div className="flex items-center gap-4 md:gap-12">
+        <div className="flex items-center gap-4 md:gap-8">
           <div onClick={() => setIsSearchOpen(true)} 
                className="group flex items-center gap-2 md:gap-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 px-3 md:px-6 py-2 rounded-full cursor-pointer transition-all w-auto md:w-64">
             <span style={{ color: COLORS.acc1 }} className="text-sm font-black italic opacity-60">#</span>
@@ -77,7 +105,20 @@ export default function LandingPage() {
             <span className="ml-auto hidden md:block text-[10px] font-black text-white/10 group-hover:text-white/20">/</span>
           </div>
 
-          <div style={{ color: COLORS.textMuted }} className="flex items-center gap-6 md:gap-10 text-xs font-black uppercase tracking-[0.25em]">
+          <div className="flex items-center gap-6 md:gap-8">
+            {/* LOGIN / SIGNUP LINK */}
+            {!user ? (
+              <Link href="/login" 
+                    className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-[#CD8E6D] transition">
+                Login / Signup
+              </Link>
+            ) : (
+              <button onClick={handleLogout}
+                      className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-red-500 transition">
+                Logout
+              </button>
+            )}
+
             <Link href="/dex">
               <div style={{ borderColor: '#302626', background: `linear-gradient(to top right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
                    className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 md:border-4 cursor-pointer hover:scale-110 transition shadow-2xl" />
@@ -91,7 +132,6 @@ export default function LandingPage() {
           <div className="flex justify-between items-baseline mb-10 md:mb-20">
             <h2 className="text-2xl md:text-4xl font-black uppercase tracking-[0.15em] text-white">Trending Now</h2>
             
-            {/* UPDATED: Navigates to the new Archive page */}
             <Link href="/archive"
                     style={{ color: COLORS.acc1, borderColor: '#302626', backgroundColor: COLORS.bgCard }}
                     className="text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 md:px-8 py-2 md:py-3 rounded-xl transition-all border shadow-2xl hover:scale-105 active:scale-95">
