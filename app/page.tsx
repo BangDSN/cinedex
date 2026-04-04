@@ -66,12 +66,10 @@ export default function LandingPage() {
            className="h-20 md:h-24 backdrop-blur-xl border-b flex items-center justify-between px-4 md:px-14 sticky top-0 z-50">
         <div className="flex items-center gap-2">
            <div style={{ backgroundColor: COLORS.acc1 }} className="w-3 h-6 md:w-4 md:h-8 rounded" />
-           {/* LOGO: Bold and Non-Italic */}
            <h1 style={{ color: COLORS.acc1 }} className="text-xl md:text-3xl font-black tracking-tighter uppercase cursor-pointer hover:opacity-80 transition">Cinedex</h1>
         </div>
         
         <div className="flex items-center gap-4 md:gap-12">
-          {/* SEARCH BAR: Labeled "Search Dex" */}
           <div onClick={() => setIsSearchOpen(true)} 
                className="group flex items-center gap-2 md:gap-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 px-3 md:px-6 py-2 rounded-full cursor-pointer transition-all w-auto md:w-64">
             <span style={{ color: COLORS.acc1 }} className="text-sm font-black italic opacity-60">#</span>
@@ -92,11 +90,13 @@ export default function LandingPage() {
         <section className="mb-20 md:mb-40">
           <div className="flex justify-between items-baseline mb-10 md:mb-20">
             <h2 className="text-2xl md:text-4xl font-black uppercase tracking-[0.15em] text-white">Trending Now</h2>
-            <button onClick={() => setShowAllTrending(!showAllTrending)}
+            
+            {/* UPDATED: Navigates to the new Archive page */}
+            <Link href="/archive"
                     style={{ color: COLORS.acc1, borderColor: '#302626', backgroundColor: COLORS.bgCard }}
                     className="text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 md:px-8 py-2 md:py-3 rounded-xl transition-all border shadow-2xl hover:scale-105 active:scale-95">
-              {showAllTrending ? "← Less" : "Full Archive →"}
-            </button>
+              Full Archive →
+            </Link>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-x-4 md:gap-x-12 gap-y-10 md:gap-y-20">
