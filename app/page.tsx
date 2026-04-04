@@ -62,7 +62,6 @@ export default function LandingPage() {
   return (
     <div style={{ backgroundColor: COLORS.bg, color: COLORS.textMain }} className="min-h-screen font-sans selection:bg-[#3C7F8C]/30 overflow-x-hidden">
       
-      {/* RESPONSIVE NAVIGATION */}
       <nav style={{ backgroundColor: `${COLORS.bg}CC`, borderColor: '#302626' }} 
            className="h-20 md:h-24 backdrop-blur-xl border-b flex items-center justify-between px-4 md:px-14 sticky top-0 z-50">
         <div className="flex items-center gap-2">
@@ -71,7 +70,6 @@ export default function LandingPage() {
         </div>
         
         <div className="flex items-center gap-4 md:gap-12">
-          {/* RESPONSIVE SEARCH BAR */}
           <div onClick={() => setIsSearchOpen(true)} 
                className="group flex items-center gap-2 md:gap-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 px-3 md:px-6 py-2 rounded-full cursor-pointer transition-all w-auto md:w-64">
             <span style={{ color: COLORS.acc1 }} className="text-sm font-black italic opacity-60">#</span>
@@ -88,7 +86,6 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* RESPONSIVE MAIN CONTAINER */}
       <main className="max-w-[1400px] mx-auto py-10 md:py-20 px-4 md:px-10">
         <section className="mb-20 md:mb-40">
           <div className="flex justify-between items-baseline mb-10 md:mb-20">
@@ -100,22 +97,27 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {/* RESPONSIVE GRID */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-x-4 md:gap-x-12 gap-y-10 md:gap-y-20">
             {(showAllTrending ? trending.slice(0, 20) : trending.slice(0, 10)).map((movie, idx) => (
               <Link href={`/movie/${movie.id}`} key={movie.id} className="group relative block">
                 <div style={{ backgroundColor: COLORS.bgCard, borderColor: '#302626' }} 
                      className="relative z-10 aspect-[2/3] overflow-hidden rounded-[1.5rem] md:rounded-[2.5rem] transition-all duration-700 group-hover:-translate-y-4 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.9)] border group-hover:border-[#9B5B3E]/50">
                   <img src={`${IMAGE_BASE}${movie.poster_path}`} alt={movie.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-                  {!showAllTrending && (
-                    <div className="absolute bottom-3 left-3 md:bottom-5 md:left-5 z-20 flex items-center gap-1.5">
-                      <div className="bg-black/60 backdrop-blur-xl border border-white/10 px-2 md:px-3 py-1 rounded-lg flex items-center gap-1 shadow-2xl">
-                        <span style={{ color: COLORS.acc1 }} className="text-[8px] md:text-[10px] font-black italic">#</span>
+                  
+                  {/* SYMMETRICAL BADGES CONTAINER */}
+                  <div className="absolute bottom-3 left-3 right-3 md:bottom-5 md:left-5 md:right-5 z-20 flex justify-between items-center">
+                    {!showAllTrending && (
+                      <div className="bg-black/60 backdrop-blur-xl border border-white/10 w-10 h-7 md:w-14 md:h-10 rounded-lg flex items-center justify-center shadow-2xl">
+                        <span style={{ color: COLORS.acc1 }} className="text-[8px] md:text-[10px] font-black italic mr-0.5">#</span>
                         <span style={{ color: COLORS.rankText }} className="text-sm md:text-xl font-black italic tracking-tighter">{idx + 1}</span>
                       </div>
+                    )}
+                    <div style={{ borderColor: `${COLORS.acc3}33`, color: COLORS.acc3 }} 
+                         className="bg-black/60 backdrop-blur-xl border w-10 h-7 md:w-14 md:h-10 rounded-lg flex items-center justify-center text-[10px] md:text-[12px] font-black shadow-2xl ml-auto">
+                      {Math.round(movie.vote_average * 10)}%
                     </div>
-                  )}
-                  <div style={{ borderColor: `${COLORS.acc3}33`, color: COLORS.acc3 }} className="absolute bottom-3 right-3 md:bottom-5 md:right-5 bg-black/60 backdrop-blur-xl px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-[12px] font-black border shadow-2xl z-20">{Math.round(movie.vote_average * 10)}%</div>
+                  </div>
+
                 </div>
                 <div className="mt-4 md:mt-8 md:pl-4">
                   <h3 className="text-sm md:text-base font-bold leading-tight text-white group-hover:text-[#CD8E6D] transition line-clamp-1">{movie.title}</h3>
