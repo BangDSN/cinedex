@@ -37,8 +37,10 @@ export default function MovieDetail() {
   
   // INTERACTION STATE
   const [user, setUser] = useState<any>(null);
+  const [existingLog, setExistingLog] = useState<any>(null); // Track if already watched
   const [showLogOptions, setShowLogOptions] = useState(false);
   const [rating, setRating] = useState(7.0);
+  const [review, setReview] = useState('');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -62,10 +64,28 @@ export default function MovieDetail() {
         
         const movieData = await movieRes.json();
         const creditsData = await creditsRes.json();
+        const currentUser = sessionRes.data.session?.user ?? null;
 
         setMovie(movieData);
         setCast(creditsData.cast?.slice(0, 9) || []);
-        setUser(sessionRes.data.session?.user ?? null);
+        setUser(currentUser);
+
+        // CHECK FOR EXISTING LOG
+        if (currentUser) {
+          const { data: logData } = await supabase
+            .from('movie_logs')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .eq('movie_id', id)
+            .single();
+          
+          if (logData) {
+            setExistingLog(logData);
+            setRating(logData.rating);
+            setReview(logData.review || '');
+          }
+        }
+
         setLoading(false);
       } catch (error) {
         setLoading(false);
@@ -78,19 +98,26 @@ export default function MovieDetail() {
   const handleLogMovie = async () => {
     if (!user) return router.push('/login');
     
-    const { error } = await supabase.from('movie_logs').insert({
+    // Use upsert to handle both NEW logs and UPDATES to old ones
+    const { error } = await supabase.from('movie_logs').upsert({
+      ...(existingLog ? { id: existingLog.id } : {}), // Include ID if updating
       user_id: user.id,
       movie_id: movie.id,
       movie_title: movie.title,
       poster_path: movie.poster_path,
       runtime: movie.runtime || 0,
-      rating: rating
+      rating: rating,
+      review: review
     });
 
     if (!error) {
-      setMessage('Entry Logged to Archive');
+      setMessage(existingLog ? 'PROTOCOL_UPDATED' : 'LOG_ENTRY_SAVED');
       setShowLogOptions(false);
       setTimeout(() => setMessage(''), 3000);
+      
+      // Refresh local "existingLog" state
+      const { data } = await supabase.from('movie_logs').select('*').eq('user_id', user.id).eq('movie_id', id).single();
+      setExistingLog(data);
     } else {
       alert(error.message);
     }
@@ -98,19 +125,13 @@ export default function MovieDetail() {
 
   const handleWatchlist = async () => {
     if (!user) return router.push('/login');
-    
     const { error } = await supabase.from('watchlists').insert({
       user_id: user.id,
       movie_id: movie.id,
       movie_title: movie.title,
       poster_path: movie.poster_path
     });
-
-    if (error) {
-      setMessage('Already in Watchlist');
-    } else {
-      setMessage('Added to Watchlist');
-    }
+    setMessage(error ? 'Already in Watchlist' : 'Added to Watchlist');
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -153,7 +174,6 @@ export default function MovieDetail() {
         </div>
       </div>
 
-      {/* CONTENT GRID */}
       <main className="max-w-7xl mx-auto px-10 grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-20 -mt-16 relative z-20">
         <div className="flex flex-col gap-10">
           <div style={{ borderColor: '#302626' }} className="rounded-[2.5rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border-4">
@@ -165,17 +185,19 @@ export default function MovieDetail() {
                 <>
                   <button 
                     onClick={() => setShowLogOptions(true)}
-                    style={{ backgroundColor: COLORS.acc1 }} 
+                    style={{ backgroundColor: existingLog ? COLORS.acc3 : COLORS.acc1 }} 
                     className="w-full py-5 rounded-2xl font-black uppercase tracking-widest text-black text-xs hover:scale-[1.03] active:scale-95 transition-all shadow-xl"
                   >
-                    Add to Collection
+                    {existingLog ? 'Update Protocol Entry' : 'Add to Collection'}
                   </button>
-                  <button 
-                    onClick={handleWatchlist}
-                    className="w-full py-5 rounded-2xl font-black uppercase tracking-widest text-white/40 border border-white/5 text-xs hover:bg-white/5 transition-all"
-                  >
-                    Add to Watchlist
-                  </button>
+                  {!existingLog && (
+                    <button 
+                      onClick={handleWatchlist}
+                      className="w-full py-5 rounded-2xl font-black uppercase tracking-widest text-white/40 border border-white/5 text-xs hover:bg-white/5 transition-all"
+                    >
+                      Add to Watchlist
+                    </button>
+                  )}
                 </>
               ) : (
                 <div className="bg-[#1C1616] p-6 rounded-[2rem] border border-white/10 space-y-4 animate-in fade-in zoom-in duration-300">
@@ -186,10 +208,16 @@ export default function MovieDetail() {
                   <input 
                     type="range" min="1" max="10" step="0.1" value={rating} 
                     onChange={(e) => setRating(parseFloat(e.target.value))}
-                    className="w-full accent-[#CD8E6D] cursor-pointer"
+                    className="w-full accent-[#CD8E6D] cursor-pointer mb-2"
+                  />
+                  <textarea 
+                    placeholder="WRITE REVIEW PROTOCOL..."
+                    value={review}
+                    onChange={(e) => setReview(e.target.value)}
+                    className="w-full h-32 bg-black/40 border border-white/5 rounded-xl p-4 text-[10px] font-bold text-white outline-none focus:border-[#3C7F8C] transition-all resize-none placeholder:text-white/10"
                   />
                   <div className="flex gap-2 pt-2">
-                    <button onClick={handleLogMovie} className="flex-1 bg-[#CD8E6D] py-3 rounded-xl text-black text-[10px] font-black uppercase">Log</button>
+                    <button onClick={handleLogMovie} className="flex-1 bg-[#CD8E6D] py-3 rounded-xl text-black text-[10px] font-black uppercase">Confirm</button>
                     <button onClick={() => setShowLogOptions(false)} className="flex-1 bg-white/5 py-3 rounded-xl text-white/40 text-[10px] font-black uppercase">Back</button>
                   </div>
                 </div>
