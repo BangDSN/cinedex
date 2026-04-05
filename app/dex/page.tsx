@@ -27,7 +27,7 @@ const supabase = createClient(
 export default function TheDex() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [logs, setLogs] = useState<any[]>([]); // NEW: Holds movie logs
+  const [logs, setLogs] = useState<any[]>([]); 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [top10Movies, setTop10Movies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,6 @@ export default function TheDex() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // Editing State
   const [editing, setEditing] = useState(false);
   const [editedFullName, setEditedFullName] = useState('');
   const [editedBio, setEditedBio] = useState('');
@@ -45,7 +44,7 @@ export default function TheDex() {
   const [editedStudio, setEditedStudio] = useState('');
   const [editedGenre, setEditedGenre] = useState('');
 
-  // CALCULATED STATS
+  // DYNAMIC STATS CALCULATION
   const stats = {
     hoursWatched: logs.reduce((acc, log) => acc + (log.runtime / 60), 0).toFixed(1),
     meanScore: logs.length > 0 
@@ -66,14 +65,12 @@ export default function TheDex() {
 
       setUser(session.user);
       
-      // Fetch Profile
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .single();
 
-      // Fetch Movie Logs
       const { data: logData } = await supabase
         .from('movie_logs')
         .select('*')
@@ -104,6 +101,13 @@ export default function TheDex() {
     fetchData();
   }, [router]);
 
+  // FIXED: handleLogout function restored
+  const handleLogout = async () => {
+    setLoading(true);
+    await supabase.auth.signOut();
+    router.replace('/'); 
+  };
+
   const handleUpdateProfile = async () => {
     setLoading(true);
     const updates = {
@@ -132,7 +136,6 @@ export default function TheDex() {
 
   const logMovie = async (movie: any, userRating: number) => {
     setLoading(true);
-    // Fetch details to get runtime
     const detailRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}?api_key=${TMDB_API_KEY}`);
     const details = await detailRes.json();
 
@@ -299,7 +302,6 @@ export default function TheDex() {
         </div>
 
         <div className="space-y-12">
-          {/* STATS HEADER */}
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-6">
             <div className="bg-[#1C1616] p-8 rounded-[2.5rem] border border-white/5 shadow-xl">
                 <div className="flex justify-between items-center mb-6">
@@ -353,7 +355,6 @@ export default function TheDex() {
              </div>
           </section>
 
-          {/* NEW: ACTIVITY LOG SECTION */}
           <section className="mt-20">
              <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-white/40 mb-8 px-4 flex items-center gap-4">
                 <div className="w-8 h-px bg-[#CD8E6D]/40" /> Activity Log
@@ -385,8 +386,6 @@ export default function TheDex() {
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)} 
         onMovieSelect={(movie) => {
-          // You'll want to prompt for a rating here, 
-          // or we can default to 7 for now to test the "Log" functionality
           logMovie(movie, 7); 
           setIsSearchOpen(false);
         }}
