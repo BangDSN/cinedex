@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // ADDED
+import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import SearchOverlay from './components/SearchOverlay';
 
@@ -33,17 +33,29 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const router = useRouter(); // ADDED
+  const [profile, setProfile] = useState<any>(null); // Track profile for avatar
+  const router = useRouter();
 
   useEffect(() => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Fetch the avatar_url specifically
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', session.user.id)
+          .single();
+        setProfile(profileData);
+      }
     };
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (!session) setProfile(null);
     });
 
     return () => subscription.unsubscribe();
@@ -117,12 +129,24 @@ export default function LandingPage() {
               </button>
             )}
 
-            {/* FIXED: Using onClick and router.push to allow for better history control */}
             <div 
               onClick={() => router.push('/dex')}
-              style={{ borderColor: '#302626', background: `linear-gradient(to top right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 md:border-4 cursor-pointer hover:scale-110 transition shadow-2xl" 
-            />
+              style={{ borderColor: '#302626' }} 
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 md:border-4 cursor-pointer hover:scale-110 transition shadow-2xl overflow-hidden" 
+            >
+               {profile?.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div 
+                  style={{ background: `linear-gradient(to top right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
+                  className="w-full h-full"
+                />
+              )}
+            </div>
           </div>
         </div>
       </nav>
