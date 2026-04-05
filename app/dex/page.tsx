@@ -70,9 +70,9 @@ export default function TheDex() {
         setEditedStudio(profileData.favorite_studio || '');
         setEditedGenre(profileData.favorite_genre || '');
 
-        // Fetch TMDB data for Top 10 IDs
+        // FIXED: Added (id: any) to satisfy TypeScript build rules
         const top10Ids = profileData.top_10_ids || [];
-        const tmdbPromises = top10Ids.map(id => 
+        const tmdbPromises = top10Ids.map((id: any) => 
           fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}`).then(res => res.json())
         );
         const tmdbResults = await Promise.all(tmdbPromises);
@@ -115,16 +115,13 @@ export default function TheDex() {
     const fileName = `${user.id}-${Math.random()}.${fileExt}`;
     const filePath = `avatars/${fileName}`;
 
-    // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('media')
       .upload(filePath, file);
 
     if (!uploadError) {
-      // Get Public URL
       const { data } = supabase.storage.from('media').getPublicUrl(filePath);
       
-      // Update profile with new avatar URL
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: data.publicUrl })
@@ -159,7 +156,6 @@ export default function TheDex() {
         <div className="flex items-center gap-6 relative">
           <button onClick={() => setIsSearchOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-[#CD8E6D] transition">Terminal Search (/)</button>
           
-          {/* SETTINGS OPTION */}
           <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="w-8 h-8 rounded-full border-2 border-white/10 flex items-center justify-center hover:border-[#CD8E6D] transition group">
             <span style={{ color: COLORS.acc1 }} className="text-sm font-black group-hover:scale-110">⚙︎</span>
           </button>
@@ -174,11 +170,10 @@ export default function TheDex() {
 
       <main className="max-w-[1500px] mx-auto px-10 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-12 mt-12">
         
-        {/* SIDEBAR: EDITABLE PROFILE */}
         <div className="space-y-8">
           <div className="group relative">
             {profile?.avatar_url ? (
-                <img src={profile.avatar_url} className="w-full aspect-square rounded-[2.5rem] object-cover border-[8px] border-[#1C1616] shadow-2xl" />
+                <img src={profile.avatar_url} className="w-full aspect-square rounded-[2.5rem] object-cover border-[8px] border-[#1C1616] shadow-2xl" alt="Profile" />
             ) : (
                 <div style={{ borderColor: '#302626', background: `linear-gradient(to top right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
                      className="w-full aspect-square rounded-[2.5rem] border-[8px] shadow-2xl" />
@@ -194,7 +189,7 @@ export default function TheDex() {
                 <input type="text" value={editedFullName} onChange={(e) => setEditedFullName(e.target.value)}
                        className="w-full bg-[#1C1616] text-white p-3 rounded-lg border border-white/10 font-bold" />
             ) : (
-                <h2 className="text-3xl font-black uppercase tracking-tighter text-white">{profile?.full_name || user?.email.split('@')[0]}</h2>
+                <h2 className="text-3xl font-black uppercase tracking-tighter text-white">{profile?.full_name || user?.email?.split('@')[0]}</h2>
             )}
 
             {editing ? (
@@ -234,17 +229,17 @@ export default function TheDex() {
           )}
         </div>
 
-        {/* CONTENT: EDITABLE TOP 10 */}
         <div className="space-y-12">
           
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-6">
             <div className="bg-[#1C1616] p-8 rounded-[2.5rem] border border-white/5 shadow-xl">
                 <div className="flex justify-between items-center mb-6">
                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/30">Watch Protocol</p>
-                    <p style={{ color: COLORS.acc1 }} className="text-xl font-black italic">{profile?.hours_watched.toLocaleString() || '0'} <span className="text-[10px] opacity-40">HRS</span></p>
+                    <p style={{ color: COLORS.acc1 }} className="text-xl font-black italic">{profile?.hours_watched?.toLocaleString() || '0'} <span className="text-[10px] opacity-40">HRS</span></p>
                 </div>
                 <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
-                    <div style={{ width: `${(profile?.hours_watched / 5000) * 100}%`, background: `linear-gradient(to right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
+                    {/* FIXED: Safe calculation for progress bar width */}
+                    <div style={{ width: `${((profile?.hours_watched || 0) / 5000) * 100}%`, background: `linear-gradient(to right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
                          className="h-full rounded-full transition-all duration-1000" />
                 </div>
             </div>
@@ -255,15 +250,12 @@ export default function TheDex() {
                   <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mt-1">Mean Score</p>
                </div>
                <div className="bg-[#1C1616] p-6 rounded-[2rem] border border-white/5 text-center">
-                  <p style={{ color: COLORS.acc3 }} className="text-2xl font-black italic">{profile?.top_10_ids.length || '0'}</p>
+                  <p style={{ color: COLORS.acc3 }} className="text-2xl font-black italic">{profile?.top_10_ids?.length || '0'}</p>
                   <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mt-1">Movies Vaulted</p>
                </div>
             </div>
           </div>
 
-          {/* score distribution component would go here, requires complex charting */}
-
-          {/* TOP 10 LIVE POSTERS (Requires separate edit logic) */}
           <section>
              <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-white/40 mb-8 px-4 flex items-center gap-4">
                 <div className="w-8 h-px bg-[#CD8E6D]/40" /> Top 10 Selection
@@ -281,8 +273,6 @@ export default function TheDex() {
                 ))}
              </div>
           </section>
-
-          {/* Recently logged component would go here */}
 
         </div>
       </main>
