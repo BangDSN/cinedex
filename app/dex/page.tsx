@@ -27,6 +27,7 @@ const supabase = createClient(
 export default function TheDex() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [logs, setLogs] = useState<any[]>([]); // NEW: Holds movie logs
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [top10Movies, setTop10Movies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,7 @@ export default function TheDex() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  // Editing State
   const [editing, setEditing] = useState(false);
   const [editedFullName, setEditedFullName] = useState('');
   const [editedBio, setEditedBio] = useState('');
@@ -42,6 +44,15 @@ export default function TheDex() {
   const [editedDirector, setEditedDirector] = useState('');
   const [editedStudio, setEditedStudio] = useState('');
   const [editedGenre, setEditedGenre] = useState('');
+
+  // CALCULATED STATS
+  const stats = {
+    hoursWatched: logs.reduce((acc, log) => acc + (log.runtime / 60), 0).toFixed(1),
+    meanScore: logs.length > 0 
+      ? (logs.reduce((acc, log) => acc + log.rating, 0) / logs.length).toFixed(1) 
+      : "0.0",
+    moviesLogged: logs.length
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,11 +66,21 @@ export default function TheDex() {
 
       setUser(session.user);
       
+      // Fetch Profile
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .single();
+
+      // Fetch Movie Logs
+      const { data: logData } = await supabase
+        .from('movie_logs')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('logged_at', { ascending: false });
+
+      if (logData) setLogs(logData);
 
       if (profileData) {
         setProfile(profileData);
@@ -75,7 +96,7 @@ export default function TheDex() {
           fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}`).then(res => res.json())
         );
         const tmdbResults = await Promise.all(tmdbPromises);
-        setTop10Movies(tmdbResults.filter(m => m.id)); // Filter out any potential fetch errors
+        setTop10Movies(tmdbResults.filter(m => m.id));
       }
       setLoading(false);
     };
@@ -109,10 +130,33 @@ export default function TheDex() {
     setLoading(false);
   };
 
-  // --- VAULT LOGIC ---
+  const logMovie = async (movie: any, userRating: number) => {
+    setLoading(true);
+    // Fetch details to get runtime
+    const detailRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}?api_key=${TMDB_API_KEY}`);
+    const details = await detailRes.json();
+
+    const newLog = {
+      user_id: user.id,
+      movie_id: movie.id,
+      movie_title: movie.title,
+      poster_path: movie.poster_path,
+      runtime: details.runtime || 120,
+      rating: userRating,
+    };
+
+    const { error } = await supabase.from('movie_logs').insert(newLog);
+
+    if (!error) {
+      setLogs([newLog, ...logs]);
+      setMessage(`${movie.title} Logged`);
+      setTimeout(() => setMessage(''), 3000);
+    }
+    setLoading(false);
+  };
+
   const addToVault = async (movie: any) => {
     const currentIds = profile?.top_10_ids || [];
-    
     if (currentIds.includes(movie.id)) {
       setMessage('Already Vaulted');
       setTimeout(() => setMessage(''), 3000);
@@ -122,14 +166,8 @@ export default function TheDex() {
       alert("Vault Full: Remove a selection before adding new data.");
       return;
     }
-
     const updatedIds = [...currentIds, movie.id];
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ top_10_ids: updatedIds })
-      .eq('id', user.id);
-
+    const { error } = await supabase.from('profiles').update({ top_10_ids: updatedIds }).eq('id', user.id);
     if (!error) {
       setProfile({ ...profile, top_10_ids: updatedIds });
       setTop10Movies([...top10Movies, movie]);
@@ -140,12 +178,7 @@ export default function TheDex() {
 
   const removeFromVault = async (movieId: number) => {
     const updatedIds = profile.top_10_ids.filter((id: number) => id !== movieId);
-    
-    const { error } = await supabase
-      .from('profiles')
-      .update({ top_10_ids: updatedIds })
-      .eq('id', user.id);
-
+    const { error } = await supabase.from('profiles').update({ top_10_ids: updatedIds }).eq('id', user.id);
     if (!error) {
       setProfile({ ...profile, top_10_ids: updatedIds });
       setTop10Movies(top10Movies.filter(m => m.id !== movieId));
@@ -158,33 +191,16 @@ export default function TheDex() {
     setLoading(true);
     const file = event.target.files?.[0];
     if (!file) return;
-
     const fileExt = file.name.split('.').pop();
     const fileName = `${user.id}-${Math.random()}.${fileExt}`;
     const filePath = `avatars/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('media')
-      .upload(filePath, file);
-
+    const { error: uploadError } = await supabase.storage.from('media').upload(filePath, file);
     if (!uploadError) {
       const { data } = supabase.storage.from('media').getPublicUrl(filePath);
-      
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: data.publicUrl })
-        .eq('id', user.id);
-
-      if (!updateError) {
-        setProfile({ ...profile, avatar_url: data.publicUrl });
-      }
+      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id);
+      if (!updateError) setProfile({ ...profile, avatar_url: data.publicUrl });
     }
     setLoading(false);
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.replace('/'); 
   };
 
   if (loading && !profile) return (
@@ -202,7 +218,7 @@ export default function TheDex() {
            <h1 style={{ color: COLORS.acc1 }} className="text-3xl font-black tracking-tighter uppercase transition group-hover:opacity-70">Cinedex</h1>
         </Link>
         <div className="flex items-center gap-6 relative">
-          {message && <span className="text-[10px] font-black uppercase text-[#3C7F8C] animate-pulse absolute -left-32">{message}</span>}
+          {message && <span className="text-[10px] font-black uppercase text-[#3C7F8C] animate-pulse absolute -left-40">{message}</span>}
           <button onClick={() => setIsSearchOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-[#CD8E6D] transition">Terminal Search (/)</button>
           
           <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="w-8 h-8 rounded-full border-2 border-white/10 flex items-center justify-center hover:border-[#CD8E6D] transition group">
@@ -283,26 +299,29 @@ export default function TheDex() {
         </div>
 
         <div className="space-y-12">
+          {/* STATS HEADER */}
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-6">
             <div className="bg-[#1C1616] p-8 rounded-[2.5rem] border border-white/5 shadow-xl">
                 <div className="flex justify-between items-center mb-6">
                     <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/30">Watch Protocol</p>
-                    <p style={{ color: COLORS.acc1 }} className="text-xl font-black italic">{profile?.hours_watched?.toLocaleString() || '0'} <span className="text-[10px] opacity-40">HRS</span></p>
+                    <p style={{ color: COLORS.acc1 }} className="text-xl font-black italic">
+                      {stats.hoursWatched} <span className="text-[10px] opacity-40">HRS</span>
+                    </p>
                 </div>
                 <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
-                    <div style={{ width: `${((profile?.hours_watched || 0) / 5000) * 100}%`, background: `linear-gradient(to right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
+                    <div style={{ width: `${Math.min((parseFloat(stats.hoursWatched) / 5000) * 100, 100)}%`, background: `linear-gradient(to right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
                          className="h-full rounded-full transition-all duration-1000" />
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                <div className="bg-[#1C1616] p-6 rounded-[2rem] border border-white/5 text-center">
-                  <p style={{ color: COLORS.acc3 }} className="text-2xl font-black italic">7.5</p>
+                  <p style={{ color: COLORS.acc3 }} className="text-2xl font-black italic">{stats.meanScore}</p>
                   <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mt-1">Mean Score</p>
                </div>
                <div className="bg-[#1C1616] p-6 rounded-[2rem] border border-white/5 text-center">
-                  <p style={{ color: COLORS.acc3 }} className="text-2xl font-black italic">{profile?.top_10_ids?.length || '0'}</p>
-                  <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mt-1">Movies Vaulted</p>
+                  <p style={{ color: COLORS.acc3 }} className="text-2xl font-black italic">{stats.moviesLogged}</p>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mt-1">Movies Logged</p>
                </div>
             </div>
           </div>
@@ -322,38 +341,53 @@ export default function TheDex() {
                                 </div>
                             </div>
                         </Link>
-                        {/* Remove Button */}
-                        <button 
-                          onClick={() => removeFromVault(m.id)}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-900 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-30 flex items-center justify-center text-[10px] font-bold"
-                        >
-                          ×
-                        </button>
+                        <button onClick={() => removeFromVault(m.id)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-900 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-30 flex items-center justify-center text-[10px] font-bold">×</button>
                     </div>
                 ))}
-
-                {/* Empty Slots */}
                 {[...Array(10 - top10Movies.length)].map((_, i) => (
-                  <button 
-                    key={`empty-${i}`}
-                    onClick={() => setIsSearchOpen(true)}
-                    className="aspect-[2/3] rounded-[1.5rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center group hover:border-[#CD8E6D]/20 transition-all bg-[#1C1616]/30"
-                  >
+                  <button key={`empty-${i}`} onClick={() => setIsSearchOpen(true)} className="aspect-[2/3] rounded-[1.5rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center group hover:border-[#CD8E6D]/20 transition-all bg-[#1C1616]/30">
                     <span className="text-2xl text-white/5 group-hover:text-[#CD8E6D]/40 group-hover:scale-125 transition-all">+</span>
                     <span className="text-[8px] font-black uppercase tracking-widest text-white/5 group-hover:text-[#CD8E6D]/40 mt-2">Vault Movie</span>
                   </button>
                 ))}
              </div>
           </section>
+
+          {/* NEW: ACTIVITY LOG SECTION */}
+          <section className="mt-20">
+             <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-white/40 mb-8 px-4 flex items-center gap-4">
+                <div className="w-8 h-px bg-[#CD8E6D]/40" /> Activity Log
+             </h3>
+             <div className="space-y-3">
+                {logs.length > 0 ? logs.map((log, i) => (
+                  <div key={i} className="flex items-center gap-6 bg-[#1C1616]/50 p-4 rounded-3xl border border-white/5 hover:border-white/10 transition group">
+                     <img src={`${IMAGE_BASE}${log.poster_path}`} className="w-12 h-16 rounded-xl object-cover grayscale-[50%] group-hover:grayscale-0 transition" alt="" />
+                     <div className="flex-grow">
+                        <h4 className="text-sm font-black uppercase tracking-tighter text-white">{log.movie_title}</h4>
+                        <p className="text-[9px] font-bold text-[#8C7461] uppercase tracking-widest">{log.runtime} MINS</p>
+                     </div>
+                     <div className="bg-[#0F0E0E] px-4 py-2 rounded-2xl border border-[#3C7F8C]/20">
+                        <span className="text-[#3C7F8C] font-black italic text-sm">{log.rating}</span>
+                        <span className="text-[8px] text-white/10 ml-1">/10</span>
+                     </div>
+                  </div>
+                )) : (
+                  <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-[2.5rem]">
+                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/10 italic">No historical data available</p>
+                  </div>
+                )}
+             </div>
+          </section>
         </div>
       </main>
 
-      {/* Updated SearchOverlay with addToVault functionality */}
       <SearchOverlay 
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)} 
         onMovieSelect={(movie) => {
-          addToVault(movie);
+          // You'll want to prompt for a rating here, 
+          // or we can default to 7 for now to test the "Log" functionality
+          logMovie(movie, 7); 
           setIsSearchOpen(false);
         }}
       />
