@@ -30,6 +30,7 @@ export default function TheDex() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [top10Movies, setTop10Movies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState(''); // NEW: Success message state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -49,7 +50,6 @@ export default function TheDex() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        // FIX: Using replace instead of push to prevent back-button loops
         router.replace('/login');
         return;
       }
@@ -72,7 +72,6 @@ export default function TheDex() {
         setEditedGenre(profileData.favorite_genre || '');
 
         const top10Ids = profileData.top_10_ids || [];
-        // FIX: (id: any) added for Vercel build type-safety
         const tmdbPromises = top10Ids.map((id: any) => 
           fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}`).then(res => res.json())
         );
@@ -94,15 +93,20 @@ export default function TheDex() {
       favorite_actor: editedActor,
       favorite_director: editedDirector,
       favorite_studio: editedStudio,
-      favorite_genre: editedGenre,
+      favorite_genre: editedGenre, // Matches SQL column name
       updated_at: new Date(),
     };
 
+    // FIXED: Upsert pushes changes to Supabase
     const { error } = await supabase.from('profiles').upsert(updates);
 
-    if (!error) {
+    if (error) {
+      alert(`Error updating: ${error.message}`);
+    } else {
       setProfile({ ...profile, ...updates });
       setEditing(false);
+      setMessage('Profile Updated');
+      setTimeout(() => setMessage(''), 3000);
     }
     setLoading(false);
   };
@@ -140,7 +144,7 @@ export default function TheDex() {
     router.replace('/'); 
   };
 
-  if (loading) return (
+  if (loading && !profile) return (
     <div style={{ backgroundColor: COLORS.bg }} className="min-h-screen flex items-center justify-center">
       <div style={{ borderTopColor: COLORS.acc1 }} className="animate-spin rounded-full h-12 w-12 border-4 border-b-transparent"></div>
     </div>
@@ -155,6 +159,7 @@ export default function TheDex() {
            <h1 style={{ color: COLORS.acc1 }} className="text-3xl font-black tracking-tighter uppercase transition group-hover:opacity-70">Cinedex</h1>
         </Link>
         <div className="flex items-center gap-6 relative">
+          {message && <span className="text-[10px] font-black uppercase text-[#3C7F8C] animate-pulse">{message}</span>}
           <button onClick={() => setIsSearchOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-[#CD8E6D] transition">Terminal Search (/)</button>
           
           <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="w-8 h-8 rounded-full border-2 border-white/10 flex items-center justify-center hover:border-[#CD8E6D] transition group">
@@ -188,14 +193,14 @@ export default function TheDex() {
           <div className="space-y-4">
             {editing ? (
                 <input type="text" value={editedFullName} onChange={(e) => setEditedFullName(e.target.value)}
-                       className="w-full bg-[#1C1616] text-white p-3 rounded-lg border border-white/10 font-bold" />
+                       className="w-full bg-[#1C1616] text-white p-3 rounded-lg border border-white/10 font-bold outline-none focus:border-[#CD8E6D]" />
             ) : (
                 <h2 className="text-3xl font-black uppercase tracking-tighter text-white">{profile?.full_name || user?.email?.split('@')[0]}</h2>
             )}
 
             {editing ? (
                 <textarea value={editedBio} onChange={(e) => setEditedBio(e.target.value)}
-                          className="w-full h-24 bg-[#1C1616] text-white p-3 rounded-lg border border-white/10 text-xs italic opacity-80" />
+                          className="w-full h-24 bg-[#1C1616] text-white p-3 rounded-lg border border-white/10 text-xs italic opacity-80 outline-none focus:border-[#CD8E6D]" />
             ) : (
                 <p style={{ color: COLORS.textMuted }} className="text-xs font-bold leading-relaxed italic opacity-80">
                   {profile?.bio || '"Scanning library... no protocol bio initialized."'}
@@ -224,7 +229,7 @@ export default function TheDex() {
 
           {editing && (
               <div className="flex gap-2">
-                <button onClick={handleUpdateProfile} className="flex-1 bg-[#CD8E6D] py-3 rounded-xl font-black uppercase tracking-widest text-black text-[10px] hover:scale-105 transition shadow-2xl">Save</button>
+                <button onClick={handleUpdateProfile} className="flex-1 bg-[#CD8E6D] py-3 rounded-xl font-black uppercase tracking-widest text-black text-[10px] hover:scale-105 transition shadow-2xl">Save Changes</button>
                 <button onClick={() => setEditing(false)} className="flex-1 bg-[#1C1616] py-3 rounded-xl border border-white/10 font-black uppercase tracking-widest text-white/40 text-[10px] hover:text-white transition shadow-2xl">Cancel</button>
               </div>
           )}
