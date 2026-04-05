@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // ADDED
 import { createClient } from '@supabase/supabase-js';
 import SearchOverlay from './components/SearchOverlay';
 
@@ -20,7 +21,6 @@ const COLORS = {
   textMuted: '#8C7461',  
 };
 
-// Initialize Supabase
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -33,16 +33,15 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const router = useRouter(); // ADDED
 
   useEffect(() => {
-    // Check for active session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
     };
     getSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -106,7 +105,6 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-6 md:gap-8">
-            {/* LOGIN / SIGNUP LINK */}
             {!user ? (
               <Link href="/login" 
                     className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-[#CD8E6D] transition">
@@ -119,10 +117,12 @@ export default function LandingPage() {
               </button>
             )}
 
-            <Link href="/dex">
-              <div style={{ borderColor: '#302626', background: `linear-gradient(to top right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
-                   className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 md:border-4 cursor-pointer hover:scale-110 transition shadow-2xl" />
-            </Link>
+            {/* FIXED: Using onClick and router.push to allow for better history control */}
+            <div 
+              onClick={() => router.push('/dex')}
+              style={{ borderColor: '#302626', background: `linear-gradient(to top right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 md:border-4 cursor-pointer hover:scale-110 transition shadow-2xl" 
+            />
           </div>
         </div>
       </nav>
@@ -131,7 +131,6 @@ export default function LandingPage() {
         <section className="mb-20 md:mb-40">
           <div className="flex justify-between items-baseline mb-10 md:mb-20">
             <h2 className="text-2xl md:text-4xl font-black uppercase tracking-[0.15em] text-white">Trending Now</h2>
-            
             <Link href="/archive"
                     style={{ color: COLORS.acc1, borderColor: '#302626', backgroundColor: COLORS.bgCard }}
                     className="text-[9px] md:text-[10px] font-black uppercase tracking-widest px-4 md:px-8 py-2 md:py-3 rounded-xl transition-all border shadow-2xl hover:scale-105 active:scale-95">
@@ -158,7 +157,6 @@ export default function LandingPage() {
                       {Math.round(movie.vote_average * 10)}%
                     </div>
                   </div>
-
                 </div>
                 <div className="mt-4 md:mt-8 md:pl-4">
                   <h3 className="text-sm md:text-base font-bold leading-tight text-white group-hover:text-[#CD8E6D] transition line-clamp-1">{movie.title}</h3>
