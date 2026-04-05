@@ -70,7 +70,6 @@ export default function TheDex() {
         setEditedStudio(profileData.favorite_studio || '');
         setEditedGenre(profileData.favorite_genre || '');
 
-        // FIXED: Added (id: any) to satisfy TypeScript build rules
         const top10Ids = profileData.top_10_ids || [];
         const tmdbPromises = top10Ids.map((id: any) => 
           fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}`).then(res => res.json())
@@ -136,7 +135,7 @@ export default function TheDex() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    router.replace('/'); // Using replace to clean up history on logout
   };
 
   if (loading) return (
@@ -149,9 +148,10 @@ export default function TheDex() {
     <div style={{ backgroundColor: COLORS.bg, color: COLORS.textMain }} className="min-h-screen font-sans selection:bg-[#3C7F8C]/30 overflow-x-hidden pb-40">
       
       <nav className="h-24 flex items-center justify-between px-14 sticky top-0 bg-[#0F0E0E]/80 backdrop-blur-xl z-[60]">
-        <Link href="/" className="flex items-center gap-2">
-           <div style={{ backgroundColor: COLORS.acc1 }} className="w-4 h-8 rounded-sm" />
-           <h1 style={{ color: COLORS.acc1 }} className="text-3xl font-black tracking-tighter uppercase cursor-pointer hover:opacity-80 transition">Cinedex</h1>
+        {/* LOGO: Corrected Link for mouse navigation */}
+        <Link href="/" className="flex items-center gap-2 group">
+           <div style={{ backgroundColor: COLORS.acc1 }} className="w-4 h-8 rounded-sm group-hover:scale-110 transition" />
+           <h1 style={{ color: COLORS.acc1 }} className="text-3xl font-black tracking-tighter uppercase transition group-hover:opacity-70">Cinedex</h1>
         </Link>
         <div className="flex items-center gap-6 relative">
           <button onClick={() => setIsSearchOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-[#CD8E6D] transition">Terminal Search (/)</button>
@@ -227,10 +227,14 @@ export default function TheDex() {
                 <button onClick={() => setEditing(false)} className="flex-1 bg-[#1C1616] py-3 rounded-xl border border-white/10 font-black uppercase tracking-widest text-white/40 text-[10px] hover:text-white transition shadow-2xl">Cancel</button>
               </div>
           )}
+
+          {/* UPDATED: LABEL RENAMED */}
+          <div className="pt-4 border-t border-white/5">
+             <Link href="/" className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 hover:text-[#CD8E6D] transition">← Return to Home Page</Link>
+          </div>
         </div>
 
         <div className="space-y-12">
-          
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-6">
             <div className="bg-[#1C1616] p-8 rounded-[2.5rem] border border-white/5 shadow-xl">
                 <div className="flex justify-between items-center mb-6">
@@ -238,7 +242,6 @@ export default function TheDex() {
                     <p style={{ color: COLORS.acc1 }} className="text-xl font-black italic">{profile?.hours_watched?.toLocaleString() || '0'} <span className="text-[10px] opacity-40">HRS</span></p>
                 </div>
                 <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
-                    {/* FIXED: Safe calculation for progress bar width */}
                     <div style={{ width: `${((profile?.hours_watched || 0) / 5000) * 100}%`, background: `linear-gradient(to right, ${COLORS.acc2}, ${COLORS.acc1})` }} 
                          className="h-full rounded-full transition-all duration-1000" />
                 </div>
@@ -273,7 +276,6 @@ export default function TheDex() {
                 ))}
              </div>
           </section>
-
         </div>
       </main>
 
