@@ -2,13 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const TMDB_API_KEY = 'dc99eb22bc79c3e511d871e1864c4408';
 const IMAGE_BASE = 'https://image.tmdb.org/t/p/w200';
 
-export default function SearchOverlay({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+// Added onMovieSelect to the props interface
+export default function SearchOverlay({ 
+  isOpen, 
+  onClose, 
+  onMovieSelect 
+}: { 
+  isOpen: boolean, 
+  onClose: () => void,
+  onMovieSelect?: (movie: any) => void 
+}) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
     const searchMovies = async () => {
@@ -27,20 +38,30 @@ export default function SearchOverlay({ isOpen, onClose }: { isOpen: boolean, on
 
   if (!isOpen) return null;
 
+  // Helper to handle clicks
+  const handleItemClick = (movie: any) => {
+    if (onMovieSelect) {
+      // If we are in "Vault Mode" (on the profile), run the selection logic
+      onMovieSelect(movie);
+      setQuery(''); // Clear search for next time
+    } else {
+      // Otherwise, just go to the movie page
+      router.push(`/movie/${movie.id}`);
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 px-6">
-      {/* Backdrop Blur */}
-      <div className="absolute inset-0 bg-[#0F0E0E]/95 backdrop-blur-2xl" onClick={onClose} />
+      <div className="absolute inset-0 bg-[#0F0E0E]/95 backdrop-blur-xl" onClick={onClose} />
 
       <div className="relative w-full max-w-3xl bg-[#1C1616] border border-white/10 rounded-[3rem] shadow-[0_0_150px_rgba(0,0,0,1)] overflow-hidden transition-all animate-in fade-in zoom-in duration-300">
-        {/* Search Input Area */}
         <div className="p-10 border-b border-white/5 flex items-center gap-8">
           <span className="text-3xl text-[#CD8E6D] font-black italic">#</span>
           <input
             autoFocus
             type="text"
-            // Consistent Placeholder Label
-            placeholder="ACCESS CINEDEX ARCHIVE..."
+            placeholder={onMovieSelect ? "VAULT A SELECTION..." : "ACCESS CINEDEX ARCHIVE..."}
             className="w-full bg-transparent text-2xl font-black uppercase tracking-tighter text-white outline-none placeholder:text-white/5"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -48,16 +69,14 @@ export default function SearchOverlay({ isOpen, onClose }: { isOpen: boolean, on
           <button onClick={onClose} className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-[#CD8E6D] transition">Close</button>
         </div>
 
-        {/* Results List */}
         <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
           {results.length > 0 ? (
             <div className="space-y-4">
               {results.map((movie: any) => (
-                <Link 
-                  href={`/movie/${movie.id}`} 
+                <button 
                   key={movie.id} 
-                  onClick={onClose}
-                  className="flex items-center gap-8 p-4 rounded-[2rem] hover:bg-white/5 transition-all group border border-transparent hover:border-white/5"
+                  onClick={() => handleItemClick(movie)}
+                  className="w-full flex items-center gap-8 p-4 rounded-[2rem] hover:bg-white/5 transition-all group border border-transparent hover:border-white/5 text-left"
                 >
                   <div className="w-16 h-24 rounded-2xl overflow-hidden shrink-0 border border-white/5 shadow-2xl">
                     <img 
@@ -75,9 +94,11 @@ export default function SearchOverlay({ isOpen, onClose }: { isOpen: boolean, on
                     </div>
                   </div>
                   <div className="ml-auto pr-6 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                      <span className="text-[#CD8E6D] text-lg font-black italic">→</span>
+                      <span className="text-[#CD8E6D] text-[10px] font-black uppercase tracking-widest italic">
+                        {onMovieSelect ? '+ VAULT' : 'VIEW →'}
+                      </span>
                   </div>
-                </Link>
+                </button>
               ))}
             </div>
           ) : query.length > 1 ? (

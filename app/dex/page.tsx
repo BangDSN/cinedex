@@ -30,12 +30,11 @@ export default function TheDex() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [top10Movies, setTop10Movies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState(''); // NEW: Success message state
+  const [message, setMessage] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // Editing State
   const [editing, setEditing] = useState(false);
   const [editedFullName, setEditedFullName] = useState('');
   const [editedBio, setEditedBio] = useState('');
@@ -76,7 +75,7 @@ export default function TheDex() {
           fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}`).then(res => res.json())
         );
         const tmdbResults = await Promise.all(tmdbPromises);
-        setTop10Movies(tmdbResults);
+        setTop10Movies(tmdbResults.filter(m => m.id)); // Filter out any potential fetch errors
       }
       setLoading(false);
     };
@@ -93,11 +92,10 @@ export default function TheDex() {
       favorite_actor: editedActor,
       favorite_director: editedDirector,
       favorite_studio: editedStudio,
-      favorite_genre: editedGenre, // Matches SQL column name
+      favorite_genre: editedGenre,
       updated_at: new Date(),
     };
 
-    // FIXED: Upsert pushes changes to Supabase
     const { error } = await supabase.from('profiles').upsert(updates);
 
     if (error) {
@@ -109,6 +107,51 @@ export default function TheDex() {
       setTimeout(() => setMessage(''), 3000);
     }
     setLoading(false);
+  };
+
+  // --- VAULT LOGIC ---
+  const addToVault = async (movie: any) => {
+    const currentIds = profile?.top_10_ids || [];
+    
+    if (currentIds.includes(movie.id)) {
+      setMessage('Already Vaulted');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+    if (currentIds.length >= 10) {
+      alert("Vault Full: Remove a selection before adding new data.");
+      return;
+    }
+
+    const updatedIds = [...currentIds, movie.id];
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ top_10_ids: updatedIds })
+      .eq('id', user.id);
+
+    if (!error) {
+      setProfile({ ...profile, top_10_ids: updatedIds });
+      setTop10Movies([...top10Movies, movie]);
+      setMessage(`${movie.title} Vaulted`);
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  const removeFromVault = async (movieId: number) => {
+    const updatedIds = profile.top_10_ids.filter((id: number) => id !== movieId);
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ top_10_ids: updatedIds })
+      .eq('id', user.id);
+
+    if (!error) {
+      setProfile({ ...profile, top_10_ids: updatedIds });
+      setTop10Movies(top10Movies.filter(m => m.id !== movieId));
+      setMessage('Removed from Vault');
+      setTimeout(() => setMessage(''), 3000);
+    }
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,7 +202,7 @@ export default function TheDex() {
            <h1 style={{ color: COLORS.acc1 }} className="text-3xl font-black tracking-tighter uppercase transition group-hover:opacity-70">Cinedex</h1>
         </Link>
         <div className="flex items-center gap-6 relative">
-          {message && <span className="text-[10px] font-black uppercase text-[#3C7F8C] animate-pulse">{message}</span>}
+          {message && <span className="text-[10px] font-black uppercase text-[#3C7F8C] animate-pulse absolute -left-32">{message}</span>}
           <button onClick={() => setIsSearchOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-[#CD8E6D] transition">Terminal Search (/)</button>
           
           <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="w-8 h-8 rounded-full border-2 border-white/10 flex items-center justify-center hover:border-[#CD8E6D] transition group">
@@ -270,21 +313,50 @@ export default function TheDex() {
              </h3>
              <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                 {top10Movies.map((m, idx) => (
-                    <Link href={`/movie/${m.id}`} key={idx} className="group relative">
-                        <div className="aspect-[2/3] rounded-[1.5rem] overflow-hidden border border-white/5 grayscale group-hover:grayscale-0 transition-all duration-700 hover:scale-[1.05] shadow-xl hover:border-[#CD8E6D]/30">
-                            <img src={m.poster_path ? `${IMAGE_BASE}${m.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster'} className="w-full h-full object-cover" alt={m.title} />
-                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
-                                <span style={{ color: COLORS.acc1 }} className="text-[10px] font-black italic">{idx + 1}</span>
+                    <div key={idx} className="group relative">
+                        <Link href={`/movie/${m.id}`}>
+                            <div className="aspect-[2/3] rounded-[1.5rem] overflow-hidden border border-white/5 grayscale group-hover:grayscale-0 transition-all duration-700 hover:scale-[1.05] shadow-xl hover:border-[#CD8E6D]/30">
+                                <img src={m.poster_path ? `${IMAGE_BASE}${m.poster_path}` : 'https://via.placeholder.com/500x750?text=No+Poster'} className="w-full h-full object-cover" alt={m.title} />
+                                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
+                                    <span style={{ color: COLORS.acc1 }} className="text-[10px] font-black italic">{idx + 1}</span>
+                                </div>
                             </div>
-                        </div>
-                    </Link>
+                        </Link>
+                        {/* Remove Button */}
+                        <button 
+                          onClick={() => removeFromVault(m.id)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-900 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-30 flex items-center justify-center text-[10px] font-bold"
+                        >
+                          ×
+                        </button>
+                    </div>
+                ))}
+
+                {/* Empty Slots */}
+                {[...Array(10 - top10Movies.length)].map((_, i) => (
+                  <button 
+                    key={`empty-${i}`}
+                    onClick={() => setIsSearchOpen(true)}
+                    className="aspect-[2/3] rounded-[1.5rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center group hover:border-[#CD8E6D]/20 transition-all bg-[#1C1616]/30"
+                  >
+                    <span className="text-2xl text-white/5 group-hover:text-[#CD8E6D]/40 group-hover:scale-125 transition-all">+</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/5 group-hover:text-[#CD8E6D]/40 mt-2">Vault Movie</span>
+                  </button>
                 ))}
              </div>
           </section>
         </div>
       </main>
 
-      <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      {/* Updated SearchOverlay with addToVault functionality */}
+      <SearchOverlay 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+        onMovieSelect={(movie) => {
+          addToVault(movie);
+          setIsSearchOpen(false);
+        }}
+      />
     </div>
   );
 }
